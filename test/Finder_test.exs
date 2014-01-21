@@ -17,21 +17,21 @@ defmodule FinderTest do
   end 
 
   test "find all files in directory" do
-  	expectedFiles = prefix_list_with(["baz.txt", "bar", "foo", "foo/bob.md", "foo/alice.md"], @testfiles)
+  	expectedFiles = prefix_list_with(["baz.txt", "bar", "foo", "bar/.gitkeep", "foo/bob.md", "foo/alice.md"], @testfiles)
   	stream = Finder.new() |> Finder.find(@testfiles)
-  	assert expectedFiles == Enum.to_list(stream)
+  	assert Enum.sort(expectedFiles) == Enum.sort(Enum.to_list(stream))
   end
 
   test "find only files in directory" do
-  	expectedFiles = prefix_list_with(["baz.txt", "foo/bob.md", "foo/alice.md"], @testfiles)
+  	expectedFiles = prefix_list_with(["baz.txt", "bar/.gitkeep", "foo/bob.md", "foo/alice.md"], @testfiles)
   	stream = Finder.new() |> Finder.onlyFiles() |> Finder.find(@testfiles)
-  	assert expectedFiles == Enum.to_list(stream)
+  	assert Enum.sort(expectedFiles) == Enum.sort(Enum.to_list(stream))
   end
 
   test "find only directories in directory" do
   	expectedFiles = prefix_list_with(["bar", "foo"], @testfiles)
   	stream = Finder.new() |> Finder.onlyDirectories() |> Finder.find(@testfiles)
-  	assert expectedFiles == Enum.to_list(stream)
+  	assert Enum.sort(expectedFiles) == Enum.sort(Enum.to_list(stream))
   end
 
   test "find nothing in not existing directory" do
