@@ -11,28 +11,33 @@ defmodule Finder do
     @doc "Configuration. Will be evaluated in find/2."
     # This record is held public, so it could be stored and manipulated externally.
     # Maybe this is a not so good idea ...
-    defrecord Config, mode: :all
+    defrecord Config, mode: :all, file_endings: []
 
     @doc "Creates a new Finder Config with default values"
     def new() do
         Config.new()
     end
 
-    # @doc "Return only files"
+    @doc "Return only files"
     def onlyFiles(config) when is_record(config, Config) do
         config.mode(:files)
     end
 
-    # @doc "Return only directories"
+    @doc "Return only directories"
     def onlyDirectories(config) when is_record(config, Config) do
         config.mode(:dirs)
+    end
+
+    @doc "Will find only files, with given file endings like '.exs'"
+    def withFileEndings(config, endings) when is_list(endings) do
+        config.file_endings(endings).mode(:files)
     end
 
     @doc "Returns a stream of found files"
     def find(config, rootDir) when is_record(config, Config) do
         # Remove a possible trailing right slash.
         rootDir = String.rstrip(rootDir, ?/)
-        # 
+        # Perform search.
         searchInDirectory(config, rootDir)
     end 
 
@@ -44,13 +49,14 @@ defmodule Finder do
             # Create a stream for each path in list.
             { :ok, list } -> streamPathList(config, Enum.map(list, &(dir <> "/" <> &1)))
             # Ignore errors so far.
-            _ -> []
+            _ -> Stream.concat([[]])
         end
     end
 
     # Returning a concatenation of streams for the given files and directories.
     defp streamPathList(config, list) do
-        files = Enum.filter(list, &(!File.dir?(&1)))
+        files = Enum.filter(list, &(!File.dir?(&1))) 
+            |> filterFilesByEnding(config)
         dirs = Enum.filter(list, &(File.dir?(&1)))
         streams = [files, dirs]
         if config.mode == :files do
@@ -77,6 +83,15 @@ defmodule Finder do
             )
         )
     end
+
+    # Do not filter if there are no defined endings.
+    defp filterFilesByEnding(files, Config[file_endings: []]) do
+        files
+    end
+
+    defp filterFilesByEnding(files, Config[file_endings: endings]) do
+        Enum.filter(files, &(String.ends_with?(&1, endings)))
+    end 
 
     #--- not yet implemented functionality ---
     # Implement if you like to do :)
