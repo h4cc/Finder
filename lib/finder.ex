@@ -11,7 +11,7 @@ defmodule Finder do
     @doc "Configuration. Will be evaluated in find/2."
     # This record is held public, so it could be stored and manipulated externally.
     # Maybe this is a not so good idea ...
-    defrecord Config, mode: :all, file_endings: [], file_regexes: []
+    defrecord Config, mode: :all, stats: false, file_endings: [], file_regexes: [], dir_regexes: []
 
     @doc "Creates a new Finder Config with default values"
     def new() do
@@ -35,8 +35,17 @@ defmodule Finder do
 
     @doc "Add a regex any file name has to fit to."
     def with_file_regex(config, regex) when is_record(config, Config) and is_regex(regex) do
-    #is_record(regex, Regex) do
         config.file_regexes(config.file_regexes ++ [regex])
+    end
+
+    @doc "Add a regex any dir name has to fit to."
+    def with_directory_regex(config, regex) when is_record(config, Config) and is_regex(regex) do
+        config.dir_regexes(config.dir_regexes ++ [regex])
+    end
+
+    @doc "Return File.Stat instead of the paths"
+    def return_stats(config, flag) when is_record(config, Config) and is_boolean(flag) do
+        config.stats(flag)
     end
 
     @doc "Returns a stream of found files"
@@ -59,23 +68,24 @@ defmodule Finder do
         end
     end
 
-    # Enum.map(list, &(dir <> "/" <> &1))
-
     # Returning a concatenation of streams for the given files and directories.
     defp stream_path_list(config, dir, list) do
 
-        {files, dirs} = Enum.partition(list, &(File.dir?(dir <> "/" <> &1)))
+        # Split to dirs and files.
+        {dirs, files} = Enum.partition(list, &(File.dir?(dir <> "/" <> &1)))
 
+        # Filter files.
         files = files
             |> filter_files_by_ending(config)
             |> filter_files_by_regex(config)
-            # Prefix file with absolute path.
-            |> Enum.map(&(dir <> "/" <> &1))
+            |> Enum.map(&(dir <> "/" <> &1))    # Prefix file with absolute path.
 
+        # Filter dirs.
         dirs = dirs
-            # Prefix dir with absolute path.
-            |> Enum.map(&(dir <> "/" <> &1))
+            |> filter_dirs_by_regex(config)
+            |> Enum.map(&(dir <> "/" <> &1))    # Prefix dir with absolute path.
 
+        # Apply mode.
         streams = [files, dirs]
         if config.mode == :files do
             streams = [files]
@@ -83,7 +93,22 @@ defmodule Finder do
         if config.mode == :dirs do
             streams = [dirs]
         end
+
+        # Global filter of dirs and files.
+        streams = streams
+            |> Enum.map(&(get_file_stats(&1, config)))
+
         Stream.concat(streams ++ [list_of_streams_for_dirs(config, dirs)])
+    end
+
+    # Not returning stats.
+    defp get_file_stats(paths, Config[stats: false]) do
+        paths
+    end
+
+    # Return stats.
+    defp get_file_stats(paths, Config[stats: true]) do
+        Enum.map(paths, &(File.stat!(&1)))
     end
 
     # Creating a list of streams for each given directory.
@@ -103,6 +128,20 @@ defmodule Finder do
     end
 
     # Do not filter if there are no defined regexes.
+    defp filter_dirs_by_regex(dirs, Config[dir_regexes: []]) do
+        dirs
+    end
+
+    defp filter_dirs_by_regex(dirs, Config[dir_regexes: regexes]) do
+        # Filter all dirs that do not fit to any given regex.
+        Enum.filter(
+            dirs,
+            # Try to find at least one regex that fits.
+            fn dir -> Enum.any?(regexes, &(Regex.match?(&1, dir))) end
+        )
+    end
+
+    # Do not filter if there are no defined regexes.
     defp filter_files_by_regex(files, Config[file_regexes: []]) do
         files
     end
@@ -114,7 +153,7 @@ defmodule Finder do
             # Try to find at least one regex that fits.
             fn file -> Enum.any?(regexes, &(Regex.match?(&1, file))) end
         )
-    end 
+    end
 
     # Do not filter if there are no defined endings.
     defp filter_files_by_ending(files, Config[file_endings: []]) do

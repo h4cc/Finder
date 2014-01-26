@@ -1,7 +1,6 @@
 
 defmodule FinderTest do
-  use ExUnit.Case
-  #, async: true
+  use ExUnit.Case, async: true
 
   @testfiles __DIR__ <> "/files/"
 
@@ -83,16 +82,40 @@ defmodule FinderTest do
     assert all_files() == result
   end
 
-#  test "find only files with matching regex" do
-#    result = Finder.new()
-#          |> Finder.with_file_regex(Regex.compile!("\/bar$"))
-#          |> Finder.find(@testfiles)
-#          |> Enum.to_list
-#          |> Enum.sort
-#    assert all_files() == result
-#  end
+  test "find only files with matching regex" do
+    result = Finder.new()
+          |> Finder.with_file_regex(Regex.compile!("^b")) # Only files starting with "b"
+          |> Finder.only_files
+          |> Finder.find(@testfiles)
+          |> Enum.to_list
+          |> Enum.sort
+    assert prefix_list_with(["foo/bob.md", "baz.txt"], @testfiles) == result
+  end
+
+  test "find only dirs with matching regex" do
+    result = Finder.new()
+          |> Finder.with_directory_regex(Regex.compile!("^b")) # Only dirs starting with "b"
+          |> Finder.only_directories
+          |> Finder.find(@testfiles)
+          |> Enum.to_list
+          |> Enum.sort
+    assert prefix_list_with(["bar"], @testfiles) == result
+  end
+
+  test "return file stats instead of path" do
+    result = Finder.new()
+          |> Finder.return_stats(true)
+          |> Finder.find(@testfiles)
+          |> Enum.to_list
+          |> Enum.sort
+    assert all_files_and_dirs() |> paths_to_stat == result
+  end
 
   #--- Helper ---
+
+  defp paths_to_stat(paths) do
+    Enum.map(paths, fn(path) -> File.stat!(path) end) |> Enum.sort
+  end
 
   defp prefix_list_with(list, prefix) do
     Enum.map(list, fn(name) -> prefix <> name end) |> Enum.sort
