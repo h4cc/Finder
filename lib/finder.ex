@@ -11,7 +11,7 @@ defmodule Finder do
     @doc "Configuration. Will be evaluated in find/2."
     # This record is held public, so it could be stored and manipulated externally.
     # Maybe this is a not so good idea ...
-    defrecord Config, mode: :all, file_endings: []
+    defrecord Config, mode: :all, file_endings: [], file_regexes: []
 
     @doc "Creates a new Finder Config with default values"
     def new() do
@@ -19,18 +19,24 @@ defmodule Finder do
     end
 
     @doc "Return only files"
-    def onlyFiles(config) when is_record(config, Config) do
+    def only_files(config) when is_record(config, Config) do
         config.mode(:files)
     end
 
     @doc "Return only directories"
-    def onlyDirectories(config) when is_record(config, Config) do
+    def only_directories(config) when is_record(config, Config) do
         config.mode(:dirs)
     end
 
     @doc "Will find only files, with given file endings like '.exs'"
-    def withFileEndings(config, endings) when is_list(endings) do
+    def with_file_endings(config, endings) when is_record(config, Config) and is_list(endings) do
         config.file_endings(endings).mode(:files)
+    end
+
+    @doc "Add a regex any file name has to fit to."
+    def with_file_regex(config, regex) when is_record(config, Config) and is_regex(regex) do
+    #is_record(regex, Regex) do
+        config.file_regexes(config.file_regexes ++ [regex])
     end
 
     @doc "Returns a stream of found files"
@@ -38,26 +44,30 @@ defmodule Finder do
         # Remove a possible trailing right slash.
         rootDir = String.rstrip(rootDir, ?/)
         # Perform search.
-        searchInDirectory(config, rootDir)
+        search_in_directory(config, rootDir)
     end 
 
     #--- Private Functions ---
 
     # Perform the search starting in given directory.
-    defp searchInDirectory(config, dir) do
+    defp search_in_directory(config, dir) do
         case File.ls(dir) do
             # Create a stream for each path in list.
-            { :ok, list } -> streamPathList(config, Enum.map(list, &(dir <> "/" <> &1)))
+            { :ok, list } -> stream_path_list(config, Enum.map(list, &(dir <> "/" <> &1)))
             # Ignore errors so far.
             _ -> Stream.concat([[]])
         end
     end
 
     # Returning a concatenation of streams for the given files and directories.
-    defp streamPathList(config, list) do
+    defp stream_path_list(config, list) do
+
         files = Enum.filter(list, &(!File.dir?(&1))) 
-            |> filterFilesByEnding(config)
+            |> filter_files_by_ending(config)
+            |> filter_files_by_regex(config)
+
         dirs = Enum.filter(list, &(File.dir?(&1)))
+
         streams = [files, dirs]
         if config.mode == :files do
             streams = [files]
@@ -65,18 +75,18 @@ defmodule Finder do
         if config.mode == :dirs do
             streams = [dirs]
         end
-        Stream.concat(streams ++ [listOfStreamsForDirs(config, dirs)])
+        Stream.concat(streams ++ [list_of_streams_for_dirs(config, dirs)])
     end
 
     # Creating a list of streams for each given directory.
-    defp listOfStreamsForDirs(config, dirs) do
+    defp list_of_streams_for_dirs(config, dirs) do
         Stream.concat(
             Stream.unfold(
                 dirs,
-                fn 
+                fn
                     # Iterate through directories
                     [subDir | t] ->
-                        {searchInDirectory(config, subDir), t}
+                        {search_in_directory(config, subDir), t}
                     [] ->
                         nil
                 end
@@ -84,12 +94,26 @@ defmodule Finder do
         )
     end
 
-    # Do not filter if there are no defined endings.
-    defp filterFilesByEnding(files, Config[file_endings: []]) do
+    # Do not filter if there are no defined regexes.
+    defp filter_files_by_regex(files, Config[file_regexes: []]) do
         files
     end
 
-    defp filterFilesByEnding(files, Config[file_endings: endings]) do
+    defp filter_files_by_regex(files, Config[file_regexes: regexes]) do
+        # Filter all files that do not fit to any given regex.
+        Enum.filter(
+            files,
+            # Try to find at least one regex that fits.
+            fn file -> Enum.any?(regexes, &(Regex.match?(&1, file))) end
+        )
+    end 
+
+    # Do not filter if there are no defined endings.
+    defp filter_files_by_ending(files, Config[file_endings: []]) do
+        files
+    end
+
+    defp filter_files_by_ending(files, Config[file_endings: endings]) do
         Enum.filter(files, &(String.ends_with?(&1, endings)))
     end 
 
