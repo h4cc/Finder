@@ -53,20 +53,28 @@ defmodule Finder do
     defp search_in_directory(config, dir) do
         case File.ls(dir) do
             # Create a stream for each path in list.
-            { :ok, list } -> stream_path_list(config, Enum.map(list, &(dir <> "/" <> &1)))
+            { :ok, list } -> stream_path_list(config, dir, list)
             # Ignore errors so far.
             _ -> Stream.concat([[]])
         end
     end
 
-    # Returning a concatenation of streams for the given files and directories.
-    defp stream_path_list(config, list) do
+    # Enum.map(list, &(dir <> "/" <> &1))
 
-        files = Enum.filter(list, &(!File.dir?(&1))) 
+    # Returning a concatenation of streams for the given files and directories.
+    defp stream_path_list(config, dir, list) do
+
+        {files, dirs} = Enum.partition(list, &(File.dir?(dir <> "/" <> &1)))
+
+        files = files
             |> filter_files_by_ending(config)
             |> filter_files_by_regex(config)
+            # Prefix file with absolute path.
+            |> Enum.map(&(dir <> "/" <> &1))
 
-        dirs = Enum.filter(list, &(File.dir?(&1)))
+        dirs = dirs
+            # Prefix dir with absolute path.
+            |> Enum.map(&(dir <> "/" <> &1))
 
         streams = [files, dirs]
         if config.mode == :files do
