@@ -4,10 +4,6 @@ otp_release:
     - R16B02
     - R16B01
     - R16B
-    - R15B03
-    - R15B02
-    - R15B01
-    - R14B04
    
 before_install:
     - git clone git://github.com/elixir-lang/elixir --depth 1
