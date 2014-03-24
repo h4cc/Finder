@@ -168,8 +168,6 @@ defmodule Finder do
         Enum.filter(files, &(String.ends_with?(&1, endings)))
     end
 
-    
-
     #--- not yet implemented functionality ---
     # Implement if you like to do :)
 
