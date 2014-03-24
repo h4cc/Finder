@@ -12,7 +12,7 @@ defmodule Finder do
     # This record is held public, so it could be stored and manipulated externally.
     # Maybe this is a not so good idea ...
     defrecord Config, mode: :all, stats: false, file_endings: [], file_regexes: [], dir_regexes: []
-
+    
     @doc "Creates a new Finder Config with default values"
     def new() do
         Config.new()
@@ -34,13 +34,17 @@ defmodule Finder do
     end
 
     @doc "Add a regex any file name has to fit to."
-    def with_file_regex(config, regex) when is_record(config, Config) and is_regex(regex) do
+    def with_file_regex(config, regex) when is_record(config, Config) do
+      if Regex.regex?(regex) do
         config.file_regexes(config.file_regexes ++ [regex])
+      end
     end
 
     @doc "Add a regex any dir name has to fit to."
-    def with_directory_regex(config, regex) when is_record(config, Config) and is_regex(regex) do
+    def with_directory_regex(config, regex) when is_record(config, Config) do
+      if Regex.regex?(regex) do
         config.dir_regexes(config.dir_regexes ++ [regex])
+      end
     end
 
     @doc "Return File.Stat instead of the paths"
@@ -162,7 +166,9 @@ defmodule Finder do
 
     defp filter_files_by_ending(files, Config[file_endings: endings]) do
         Enum.filter(files, &(String.ends_with?(&1, endings)))
-    end 
+    end
+
+    
 
     #--- not yet implemented functionality ---
     # Implement if you like to do :)
