@@ -1,16 +1,20 @@
 language: erlang
 
 otp_release:
-    - R16B02
-    - R16B01
-    - R16B
+    - 17.0
+    - 17.1
    
 before_install:
-    - git clone https://github.com/elixir-lang/elixir
-    - cd elixir && git checkout v0.12.5 && make && cd ..
+    # Install elixir from apt-get packages
+    #--- Install erlang-solutions key
+    - wget http://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
+    - sudo apt-key add erlang_solutions.asc
+    #- Fetch erlang-solutions soruce package
+    - wget http://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+    - sudo dpkg -i erlang-solutions_1.0_all.deb
+    #- Install latest elixir
+    - sudo apt-get update
+    - sudo apt-get -y install elixir
 
-before_script:
-    - "export PATH=`pwd`/elixir/bin:$PATH"
-    
 script:
-    - "MIX_ENV=test mix test"
+    - mix test
