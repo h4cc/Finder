@@ -1,24 +1,24 @@
 
 defmodule FinderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   @testfiles __DIR__ <> "/files/"
 
   test "creating a new Finder config" do
-  	assert Finder.Config[mode: :all] == Finder.new()
+  	assert %Finder.Config{dir_regexes: [], file_endings: [], file_regexes: [], mode: :all, stats: false} == Finder.new()
   end 
 
   test "only files Finder config" do
-  	assert Finder.Config[mode: :files] == Finder.new() |> Finder.only_files()
+  	assert %Finder.Config{mode: :files} == Finder.new() |> Finder.only_files()
   end 
 
   test "only directories Finder config" do
-  	assert Finder.Config[mode: :dirs] == Finder.new() |> Finder.only_directories()
+  	assert %Finder.Config{mode: :dirs} == Finder.new() |> Finder.only_directories()
   end
 
   test "files ending with Finder config" do
     config = Finder.new() |> Finder.with_file_endings([".foo", ".bar"])
-    assert Finder.Config[mode: :files, file_endings: [".foo", ".bar"]] == config
+    assert %Finder.Config{mode: :files, file_endings: [".foo", ".bar"]} == config
   end 
 
   test "find all files in directory" do
