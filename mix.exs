@@ -5,7 +5,7 @@ defmodule Finder.Mixfile do
     [ app: :finder,
       version: "0.0.1",
       elixir: ">= 0.10.0",
-      deps: deps ]
+      deps: deps() ]
   end
 
   # Configuration for the OTP application
