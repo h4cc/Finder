@@ -44,7 +44,7 @@ defmodule FinderTest do
           |> Finder.find(@testfiles)
           |> Enum.to_list
           |> Enum.sort
-  	assert all_dirs == result
+  	assert all_dirs() == result
   end
 
   test "find nothing in not existing directory" do

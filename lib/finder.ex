@@ -56,7 +56,7 @@ defmodule Finder do
     @doc "Returns a stream of found files"
     def find(config, rootDir) do
         # Remove a possible trailing right slash.
-        rootDir = String.rstrip(rootDir, ?/)
+        rootDir = String.trim_trailing(rootDir, "/")
         # Perform search.
         search_in_directory(config, rootDir)
     end 
